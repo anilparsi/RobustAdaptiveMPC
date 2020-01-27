@@ -22,7 +22,7 @@ methods
     
     % simulate
     function obj = simulate(obj,u)
-        % works only for uniform disturbance/noise bounds
+        % works only for uniform w bounds [not general polytope Hw*w<=1]
         w = -obj.w_bound + 2*obj.w_bound*rand(length(obj.x),1);        
         
         obj.x = obj.A_true*obj.x + obj.B_true*u+w;

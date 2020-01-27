@@ -1,9 +1,9 @@
-function cont = boundedComplexity(cont)
+function sys = boundedComplexity(sys)
 %% add constraints on parameters with bounded complexity overall
 
 %% Decide on directions to add constraints
 % number of parameters
-p = size(cont.H_theta,2);
+p = size(sys.H_theta,2);
 
 % Each plane in parameter space can be specified by a direction vector
 % chosen. The directions involving two zeros and 1 are chosen already. Now,
@@ -11,7 +11,7 @@ p = size(cont.H_theta,2);
 % number of grid points in between. 
 
 n_values = 3; 
-values = [linspace(-1.1,1,n_values)'];
+values = linspace(-1.1,1,n_values)';
 l_values = length(values); % length of the values vector
 
 new_dir = kron(values,ones(l_values,1));
@@ -25,7 +25,7 @@ n_new_dir = size(new_dir,1);
 % Check if already calculated bounds are valid
 try
     % load and check length
-    matrices = load('new_bounds.mat');
+    matrices = load('calc_bounds.mat');
     calc_flag = length(matrices.lb_new)~=n_new_dir;
     
     % check equality
@@ -46,14 +46,13 @@ if calc_flag
     for i = 1:n_new_dir 
     % calculate upper bound   
         cvx_begin quiet
-        cvx_solver gurobi
             variable x_max(p,1)
             variable J_max
             maximize J_max
 
             subject to
             J_max == new_dir(i,:)*x_max;
-            cont.H_theta*x_max <= cont.h_theta_k;
+            sys.H_theta*x_max <= sys.h_theta;
         cvx_end
 
         if (isnan(J_max))
@@ -65,14 +64,13 @@ if calc_flag
 
     % calculate lower bound   
         cvx_begin quiet
-        cvx_solver gurobi
             variable x_min(p,1)
             variable J_min
             minimize J_min
 
             subject to
             J_min == new_dir(i,:)*x_min;
-            cont.H_theta*x_min <= cont.h_theta_k;
+            sys.H_theta*x_min <= sys.h_theta;
         cvx_end
 
         if (isnan(J_min))
@@ -84,13 +82,13 @@ if calc_flag
 
     end
 else % use loaded matrices
-    warning('Bounded complexity matrices are being loaded from new_bounds.mat.')
+    warning('Bounded complexity matrices are being loaded from calc_bounds.mat.')
     ub_new = matrices.ub_new;
     lb_new = matrices.lb_new;
 end
 
-save('new_bounds.mat','new_dir','lb_new','ub_new');
+save('calc_bounds.mat','new_dir','lb_new','ub_new');
 
-cont.H_theta = [cont.H_theta; new_dir; -new_dir];
-cont.h_theta_k = [cont.h_theta_k; ub_new; -lb_new];
+sys.H_theta = [sys.H_theta; new_dir; -new_dir];
+sys.h_theta = [sys.h_theta; ub_new; -lb_new];
 end
