@@ -45,6 +45,6 @@ sys.vec_1_cons = ones(sys.nc,1);
 sys.Box_x = [eye(sys.n),-eye(sys.n)];
 sys.box_x = 3*[ones(sys.n,1);-ones(sys.n,1)];
 
-sys.x0 = [20;3];
+sys.x0 = [2;3];
 end
 

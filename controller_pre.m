@@ -45,7 +45,8 @@ for l = 1:cont.N
 end
 
 % define constraints
-Constraints = [-cont.H_x*z_lk(:,1) - alpha_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*x_pre];
+Constraints = [Lambda_jlk(:)>=0];
+Constraints = [Constraints,-cont.H_x*z_lk(:,1) - alpha_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*x_pre];
 for l = 1:cont.N
      Constraints = [Constraints, ...
          (sys.F+sys.G*cont.K)*z_lk(:,l) + sys.G*v_lk(:,l) + alpha_lk(:,l)*cont.f_bar <= ones(sys.nc,1)];         
@@ -58,6 +59,14 @@ for l = 1:cont.N
             cont.H_x*D_jlk(:,:,j,l) == Lambda_jlk(:,:,j,l)*cont.H_theta];         
      end
 end
+
+% define terminal constraints
+Constraints = [Constraints, ...
+               z_lk(:,cont.N+1) == zeros(sys.n,1), ...
+                cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
+
+
+options = sdpsettings('solver','gurobi','verbose',0,'debug',0);
 
 %% Generate optimizer
 options = sdpsettings('solver','gurobi','verbose',1);

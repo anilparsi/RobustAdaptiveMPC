@@ -7,7 +7,7 @@ sys = system_desc();
 %% Define controller parameters
 
 % prediction horizon
-cont.N = 9;
+cont.N = 10;
 
 % cost matrices
 cont.Q = eye(sys.n);

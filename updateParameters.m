@@ -30,7 +30,7 @@ cvx_begin quiet
         Lam*h_til<=h;
 cvx_end
 
-if ~all(cvx_status=='Solved')
+if ~strcmp(cvx_status,'Solved')
    warning(cvx_status) 
    flag = 1;
    u = [];
