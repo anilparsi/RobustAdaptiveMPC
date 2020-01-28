@@ -1,4 +1,10 @@
-function u = controller(sys,cont,xk)
+function optProb = controller_pre(sys,cont)
+
+% function to generate optimizer using yalmip
+
+% define presolve variables
+x_pre = sdpvar(sys.n,1);
+h_pre = sdpvar(sys.nHtheta,1);
 
 %% setup optimization problem
 
@@ -11,7 +17,7 @@ alpha_lk = sdpvar(1,cont.N+1,'full');
 Lambda_jlk = sdpvar(cont.nHx,sys.nHtheta,cont.nx_v,cont.N,'full');
 
 % define cost variables
-x_hat = xk;
+x_hat = x_pre;
 u_hat = [];
 J = 0;
 for l =1:cont.N
@@ -39,29 +45,22 @@ for l = 1:cont.N
 end
 
 % define constraints
-Constraints = [-cont.H_x*z_lk(:,1) - alpha_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*xk];
+Constraints = [-cont.H_x*z_lk(:,1) - alpha_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*x_pre];
 for l = 1:cont.N
      Constraints = [Constraints, ...
          (sys.F+sys.G*cont.K)*z_lk(:,l) + sys.G*v_lk(:,l) + alpha_lk(:,l)*cont.f_bar <= ones(sys.nc,1)];         
      
      for j = 1:cont.nx_v
          Constraints = [Constraints, ...
-             Lambda_jlk(:,:,j,l)*cont.h_theta_k + cont.H_x*d_jlk(:,j,l) - alpha_lk(:,l+1)*ones(cont.nHx,1) <= -cont.w_bar];
+             Lambda_jlk(:,:,j,l)*h_pre + cont.H_x*d_jlk(:,j,l) - alpha_lk(:,l+1)*ones(cont.nHx,1) <= -cont.w_bar];
          
          Constraints = [Constraints, ...
             cont.H_x*D_jlk(:,:,j,l) == Lambda_jlk(:,:,j,l)*cont.H_theta];         
      end
 end
 
-options = sdpsettings('solver','gurobi','verbose',0,'debug',0);
-
-% calculate control input
-
-diagnostics = optimize(Constraints,J,options);
-u = cont.K*xk + value(v_lk(:,1));
-
-% u = rand();
-
+%% Generate optimizer
+options = sdpsettings('solver','gurobi','verbose',1);
+optProb = optimizer(Constraints,J,options,[x_pre;h_pre],cont.K*x_pre+v_lk(:,1));
 
 end
-

@@ -30,6 +30,9 @@ cont.h_theta_0 = sys.h_theta;
 cont.mu = 2; % compute properly later
 cont.theta_hat = [0.5;0.5;0.5];
 cont.x_hat_k = sys.x0;
+cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
+cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
+
 
 % Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
 cont.H_x = [eye(sys.n); -eye(sys.n)];
@@ -46,17 +49,16 @@ cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if dis
 cont.h_T = 1;
 
 % Set cvx_solver
-cvx_solver gurobi
+% cvx_solver gurobi
 %% Define simulation parameters
 
-Tsim = 10;
+Tsim = 100;
 
 % initialize states and inputs
 x = NaN*ones(sys.n,Tsim);
 u = NaN*ones(sys.m,Tsim);
 
 theta_hats = NaN*ones(sys.p,Tsim);
-
 
 % regressors
 Dk = zeros(sys.n*cont.blk,sys.p);
@@ -68,14 +70,24 @@ x(:,1) = sys.x0;
 % model initialization
 true_sys = model(sys,x(:,1));
 
+tic
+presolve = 1;
+if presolve
+    optProb = controller_pre(sys,cont);
+end
+toc
 % simulate
 for k = 1:Tsim
     % update feasible set and parameter estimate
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
     theta_hats(:,k) = cont.theta_hat;
     
-    % calculate control input
-    u(:,k)= controller(sys,cont,x(:,k));
+    % calculate control input   
+    if presolve
+        u(:,k) = optProb([x(:,k);cont.h_theta_k]);
+    else
+        u(:,k) = controller(sys,cont,x(:,k));        
+    end
     
     % update state estimate
     cont.x_hat_k = cont.A_est*x(:,k)+cont.B_est*u(:,k);
@@ -96,6 +108,6 @@ for k = 1:Tsim
         dk = [dk(sys.n+1:end);new_dk];
         
 end
-
+toc
 %%
 plot(x(1,:),x(2,:))
