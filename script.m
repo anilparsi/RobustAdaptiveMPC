@@ -49,10 +49,10 @@ cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if dis
 cont.h_T = 1;
 
 % Set cvx_solver
-% cvx_solver gurobi
+cvx_solver gurobi
 %% Define simulation parameters
 
-Tsim = 100;
+Tsim = 20;
 
 % initialize states and inputs
 x = NaN*ones(sys.n,Tsim);
@@ -71,22 +71,30 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 1;
+presolve = 0;
+PE = 1;
+cont.rho_PE = 1.0;
 if presolve
     optProb = controller_pre(sys,cont);
 end
 toc
+
+rng(1,'twister');
+u_past_sim = [-1 1 -1 -0.5];
 % simulate
 for k = 1:Tsim
     % update feasible set and parameter estimate
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
     theta_hats(:,k) = cont.theta_hat;
     
+    % Build past input vector  (for PE)  
+    U_past = vec([u(:,k-1:-1:max(1,k-2*sys.n-1)),u_past_sim(1:max(0,2*sys.n+1-k))]);
+    
     % calculate control input   
     if presolve
         u(:,k) = optProb([x(:,k);cont.h_theta_k]);
     else
-        u(:,k) = controller(sys,cont,x(:,k));        
+        u(:,k) = controller(sys,cont,x(:,k),U_past,PE);        
     end
     
     % update state estimate
@@ -110,4 +118,5 @@ for k = 1:Tsim
 end
 toc
 %%
-plot(x(1,:),x(2,:))
+figure;plot(x(1,:),x(2,:))
+figure;plot(u)
