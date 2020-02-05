@@ -48,8 +48,6 @@ cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if dis
 % Define terminal constraint: z_N|k = 0; h_T*alpha_N|k <= 1;
 cont.h_T = 1;
 
-% Set cvx_solver
-cvx_solver gurobi
 %% Define simulation parameters
 
 Tsim = 20;
@@ -72,7 +70,7 @@ true_sys = model(sys,x(:,1));
 
 tic
 presolve = 0;
-PE = 1;
+PE = 0;
 cont.rho_PE = 1.0;
 if presolve
     optProb = controller_pre(sys,cont);
@@ -94,7 +92,8 @@ for k = 1:Tsim
     if presolve
         u(:,k) = optProb([x(:,k);cont.h_theta_k]);
     else
-        u(:,k) = controller(sys,cont,x(:,k),U_past,PE);        
+%         u(:,k) = controller(sys,cont,x(:,k),U_past,PE);  
+        u(:,k) = controller_expl(sys,cont,x(:,k));       
     end
     
     % update state estimate

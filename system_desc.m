@@ -31,6 +31,7 @@ sys.nHtheta = length(sys.h_theta);
 sys.w_bound = 0.1;
 sys.H_w = [eye(sys.n);-eye(sys.n)]/sys.w_bound;
 sys.h_w = [ones(sys.n,1);ones(sys.n,1)];
+sys.nHw = length(sys.h_w);
 
 
 % define state and input constraints: F*x + G*u <= vec_1_cons
