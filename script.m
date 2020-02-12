@@ -12,7 +12,7 @@ cont.N = 10;
 % cost matrices
 cont.Q = eye(sys.n);
 cont.R = eye(sys.m);
-cont.P = [1.467,0.207;
+cont.P = 10*[1.467,0.207;
           0.207,1.731];
 
 % block size for updating h_theta_k
@@ -50,7 +50,7 @@ cont.h_T = 1;
 
 %% Define simulation parameters
 
-Tsim = 20;
+Tsim = 10;
 
 % initialize states and inputs
 x = NaN*ones(sys.n,Tsim);
@@ -73,7 +73,8 @@ presolve = 0;
 PE = 0;
 cont.rho_PE = 1.0;
 if presolve
-    optProb = controller_pre(sys,cont);
+%     optProb = controller_pre(sys,cont);
+    optProb = controller_expl_pre(sys,cont);
 end
 toc
 
@@ -89,13 +90,14 @@ for k = 1:Tsim
     U_past = vec([u(:,k-1:-1:max(1,k-2*sys.n-1)),u_past_sim(1:max(0,2*sys.n+1-k))]);
     
     % calculate control input   
+    tic
     if presolve
         u(:,k) = optProb([x(:,k);cont.h_theta_k]);
     else
 %         u(:,k) = controller(sys,cont,x(:,k),U_past,PE);  
         u(:,k) = controller_expl(sys,cont,x(:,k));       
     end
-    
+    toc
     % update state estimate
     cont.x_hat_k = cont.A_est*x(:,k)+cont.B_est*u(:,k);
     

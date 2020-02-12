@@ -65,9 +65,6 @@ Constraints = [Constraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
                 cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
 
-
-options = sdpsettings('solver','gurobi','verbose',0,'debug',0);
-
 %% Generate optimizer
 options = sdpsettings('solver','gurobi','verbose',1);
 optProb = optimizer(Constraints,J,options,[x_pre;h_pre],cont.K*x_pre+v_lk(:,1));

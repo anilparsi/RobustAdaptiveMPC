@@ -1,4 +1,9 @@
-function u = controller_expl(sys,cont,xk)
+function optProb = controller_expl_pre(sys,cont)
+% function to generate optimizer using yalmip
+
+% define presolve variables
+x_pre = sdpvar(sys.n,1);
+h_pre = sdpvar(sys.nHtheta,1);
 
 %% setup optimization problem
 
@@ -12,7 +17,7 @@ alpha_til_lk = sdpvar(1,cont.N+1,'full');
 Lambda_jlk = sdpvar(cont.nHx,sys.nHtheta+2*sys.nHw,cont.nx_v,cont.N,'full');
 
 % define cost variables
-x_hat = xk;
+x_hat = x_pre;
 u_hat = [];
 J = 0;
 for l =1:cont.N
@@ -40,18 +45,18 @@ for l = 1:cont.N
 end
 
 % Define predicted constraints on theta
-H_pred = [sys.H_w*D_mult(sys,xk,u_hat(:,1))
+H_pred = [sys.H_w*D_mult(sys,x_pre,u_hat(:,1))
           sys.H_w*D_mult(sys,x_hat(:,2),u_hat(:,2))];
-h_pred = [sys.h_w + sys.H_w*D_mult(sys,xk,u_hat(:,1))*cont.theta_hat
+h_pred = [sys.h_w + sys.H_w*D_mult(sys,x_pre,u_hat(:,1))*cont.theta_hat
           sys.h_w + sys.H_w*D_mult(sys,x_hat(:,2),u_hat(:,2))*cont.theta_hat];
 
 H_theta_til = [cont.H_theta; H_pred];
-h_theta_til = [cont.h_theta_k; h_pred];
+h_theta_til = [h_pre; h_pred];
 
 
 % define constraints for optimisation
 Constraints = [Lambda_jlk(:)>=0];
-Constraints = [Constraints,-cont.H_x*z_lk(:,1) - alpha_til_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*xk];
+Constraints = [Constraints,-cont.H_x*z_lk(:,1) - alpha_til_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*x_pre];
 for l = 1:cont.N
      Constraints = [Constraints, ...
          (sys.F+sys.G*cont.K)*z_lk(:,l) + sys.G*v_lk(:,l) + alpha_til_lk(:,l)*cont.f_bar <= ones(sys.nc,1)];         
@@ -70,13 +75,10 @@ Constraints = [Constraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
                 cont.h_T*alpha_til_lk(cont.N+1) <= 1 ];    
             
-options = sdpsettings('solver','ipopt');%,'fmincon','fmincon.Maxiter',20
+options = sdpsettings('solver','ipopt');
 
-
-diagnostics = optimize(Constraints,J,options);
-u = value(u_hat(:,1));
-
-
+%% Generate optimizer
+optProb = optimizer(Constraints,J,options,[x_pre;h_pre],u_hat(:,1));
 
 end
 
