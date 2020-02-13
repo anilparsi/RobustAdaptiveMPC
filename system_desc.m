@@ -1,18 +1,18 @@
 function sys = system_desc()
 
 % define matrices
-sys.A0 = [ 0.5 0.2;
-      -0.1 0.6];
-sys.Ap(:,:,1) = [0.042 0
-             0.072 0.03];
-sys.Ap(:,:,2) = [0.015 0.019
-             0.009 0.035];
+sys.A0 = [ 0.8 0.2;
+      0.1 0.65];
+sys.Ap(:,:,1) = [0.026 0.05
+             0.03 0.015];
+sys.Ap(:,:,2) = [0.036 0.028
+             0.01 0.06];
 sys.Ap(:,:,3) = zeros(2,2);
 
-sys.B0 = [0; 0.5];
+sys.B0 = [0.4; 0.2];
 sys.Bp(:,:,1) = zeros(2,1);
 sys.Bp(:,:,2) = zeros(2,1);
-sys.Bp(:,:,3) = [0.04; 0.054];
+sys.Bp(:,:,3) = [0.02; 0.015];
 
 % define dimensions
 sys.n = size(sys.Bp,1);

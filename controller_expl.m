@@ -74,6 +74,9 @@ options = sdpsettings('solver','ipopt');%,'fmincon','fmincon.Maxiter',20
 
 
 diagnostics = optimize(Constraints,J,options);
+if diagnostics.problem
+   error(diagnostics.info) 
+end
 u = value(u_hat(:,1));
 
 

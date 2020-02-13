@@ -12,14 +12,14 @@ cont.N = 10;
 % cost matrices
 cont.Q = eye(sys.n);
 cont.R = eye(sys.m);
-cont.P = 10*[1.467,0.207;
+cont.P = [1.467,0.207;
           0.207,1.731];
 
 % block size for updating h_theta_k
 cont.blk = 10;
 
 % prestabilizing gain
-cont.K = [0.017 -0.41];
+cont.K = [-0.77 -0.31];
 
 % parameter bounds
 cont.H_theta = sys.H_theta;
@@ -53,11 +53,11 @@ cont.h_T = 1;
 Tsim = 10;
 
 % initialize states and inputs
-x = NaN*ones(sys.n,Tsim);
+x = NaN*ones(sys.n,Tsim+1);
 u = NaN*ones(sys.m,Tsim);
 
 theta_hats = NaN*ones(sys.p,Tsim);
-
+J = 0;
 % regressors
 Dk = zeros(sys.n*cont.blk,sys.p);
 dk = zeros(sys.n*cont.blk,1);  
@@ -69,7 +69,7 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 0;
+presolve = 1;
 PE = 0;
 cont.rho_PE = 1.0;
 if presolve
@@ -82,6 +82,10 @@ rng(1,'twister');
 u_past_sim = [-1 1 -1 -0.5];
 % simulate
 for k = 1:Tsim
+    if any(k == [15, 30, 50])
+        figure; plotregion(-cont.H_theta,-cont.h_theta_k);
+        xlim([-1 1]);ylim([-1 1]);zlim([-1 1]);
+    end
     % update feasible set and parameter estimate
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
     theta_hats(:,k) = cont.theta_hat;
@@ -94,7 +98,7 @@ for k = 1:Tsim
     if presolve
         u(:,k) = optProb([x(:,k);cont.h_theta_k]);
     else
-%         u(:,k) = controller(sys,cont,x(:,k),U_past,PE);  
+        u(:,k) = controller(sys,cont,x(:,k),U_past,PE);  
         u(:,k) = controller_expl(sys,cont,x(:,k));       
     end
     toc
@@ -104,7 +108,7 @@ for k = 1:Tsim
     % Apply to true system
     true_sys = true_sys.simulate(u(:,k));
     x(:,k+1) = true_sys.x;
-
+    J = J + x(:,k+1)'*cont.Q*x(:,k+1) + u(:,k)'*cont.R*u(:,k);
     
     % update regressors
         new_Dk = zeros(sys.n,sys.p);    
