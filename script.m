@@ -12,14 +12,14 @@ cont.N = 10;
 % cost matrices
 cont.Q = eye(sys.n);
 cont.R = eye(sys.m);
-cont.P = [1.467,0.207;
-          0.207,1.731];
+cont.P = [2.8  0.56;
+          0.56 2.5];
 
 % block size for updating h_theta_k
 cont.blk = 10;
 
 % prestabilizing gain
-cont.K = [-0.77 -0.31];
+cont.K = [-0.6562  -0.4702];
 
 % parameter bounds
 cont.H_theta = sys.H_theta;
@@ -33,11 +33,10 @@ cont.x_hat_k = sys.x0;
 cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
 cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
 
-
 % Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
 cont.H_x = [eye(sys.n); -eye(sys.n)];
 cont.vec_1_x = ones(length(cont.H_x),1);
-cont.nHx = size(cont.H_x,1);  % u in Lorenzen(2019)
+cont.nHx = size(cont.H_x,1);  % denoted u in Lorenzen(2019)
 cont.x_v = [1 1; 1 -1; -1 1; -1 -1 ]';
 cont.nx_v = length(cont.x_v); % number of vertices
 
@@ -55,6 +54,7 @@ Tsim = 10;
 % initialize states and inputs
 x = NaN*ones(sys.n,Tsim+1);
 u = NaN*ones(sys.m,Tsim);
+u_std = NaN*ones(sys.m,Tsim);
 
 theta_hats = NaN*ones(sys.p,Tsim);
 J = 0;
@@ -69,13 +69,16 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 1;
+presolve = 0;
+explore = 0;
 PE = 0;
 cont.rho_PE = 1.0;
 if presolve
-%     optProb = controller_pre(sys,cont);
-    optProb = controller_expl_pre(sys,cont);
+    optProb1 = controller_pre(sys,cont);
 end
+% if presolve
+%     optProb2 = controller_expl_pre(sys,cont);
+% end
 toc
 
 rng(1,'twister');
@@ -96,9 +99,13 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        u(:,k) = optProb([x(:,k);cont.h_theta_k]);
+        u_std(:,k) = optProb1([x(:,k);cont.h_theta_k]); 
     else
-        u(:,k) = controller(sys,cont,x(:,k),U_past,PE);  
+        u_std(:,k) = controller(sys,cont,x(:,k),U_past,PE);   
+    end
+    toc
+    
+    if explore  
         u(:,k) = controller_expl(sys,cont,x(:,k));       
     end
     toc

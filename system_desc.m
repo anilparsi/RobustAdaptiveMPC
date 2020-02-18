@@ -22,6 +22,8 @@ sys.p = size(sys.Bp,3);
 % define bounds on theta: H_theta*theta <= h_theta
 sys.H_theta = [eye(sys.p);-eye(sys.p)];
 sys.h_theta = [ones(sys.p,1);ones(sys.p,1)];
+sys.H_theta_v = [1 1 1; 1 1 -1; 1 -1 1; -1 1 1; 1 -1 -1; -1 1 -1; -1 -1 1; -1 -1 -1];
+
 
 % Generate H_theta with a predetermined complexity
 sys = boundedComplexity(sys);
@@ -42,9 +44,11 @@ sys.G = [0; 1; -1];
 sys.nc = size(sys.F,1);
 sys.vec_1_cons = ones(sys.nc,1);
 
-% define box constraint on x to find mu: Box_x*x <= box_x
-sys.Box_x = [eye(sys.n),-eye(sys.n)];
-sys.box_x = 3*[ones(sys.n,1);-ones(sys.n,1)];
+% define box constraint on x to find mu: Box_x_v: vertices of box
+sys.Box_x = [eye(sys.n);-eye(sys.n)];
+sys.box_x = 5*[ones(sys.n,1);ones(sys.n,1)];
+sys.Box_x_v = 5*[1,1; 1,-1; -1,1; -1,-1]';
+sys.Box_u_v = [1; -1]';
 
 sys.x0 = [2;3];
 end
