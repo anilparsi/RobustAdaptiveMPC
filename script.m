@@ -47,6 +47,9 @@ cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if dis
 % Define terminal constraint: z_N|k = 0; h_T*alpha_N|k <= 1;
 cont.h_T = 1;
 
+% Exploration: number of predictions
+cont.nPred_theta = 1;
+cont.nPred_X = 1;
 %% Define simulation parameters
 
 Tsim = 10;
@@ -70,7 +73,7 @@ true_sys = model(sys,x(:,1));
 
 tic
 presolve = 0;
-explore = 0;
+explore = 1;
 PE = 0;
 cont.rho_PE = 1.0;
 if presolve

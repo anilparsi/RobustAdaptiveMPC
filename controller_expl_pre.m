@@ -54,7 +54,7 @@ H_theta_til = [cont.H_theta; H_pred];
 h_theta_til = [h_pre; h_pred];
 
 
-% define constraints for optimisation
+% define constraints
 Constraints = [Lambda_jlk(:)>=0];
 Constraints = [Constraints,-cont.H_x*z_lk(:,1) - alpha_til_lk(:,1)*ones(cont.nHx,1) <= -cont.H_x*x_pre];
 for l = 1:cont.N
