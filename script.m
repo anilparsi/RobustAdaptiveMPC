@@ -14,7 +14,10 @@ cont.Q = eye(sys.n);
 cont.R = eye(sys.m);
 cont.P = [2.8  0.56;
           0.56 2.5];
-
+cont.Q_L = chol(cont.Q);
+cont.R_L = chol(cont.R);
+      
+      
 % block size for updating h_theta_k
 cont.blk = 10;
 
@@ -72,16 +75,15 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 0;
-explore = 1;
-PE = 0;
+presolve = 1;
+PE = 1;
 cont.rho_PE = 1.0;
 if presolve
     optProb1 = controller_pre(sys,cont);
 end
-% if presolve
-%     optProb2 = controller_expl_pre(sys,cont);
-% end
+if presolve
+    optProb2 = controller_expl_pre(sys,cont);
+end
 toc
 
 rng(1,'twister');
@@ -102,16 +104,14 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        u_std(:,k) = optProb1([x(:,k);cont.h_theta_k]); 
+        u_std(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
     else
-        u_std(:,k) = controller(sys,cont,x(:,k),U_past,PE);   
+%         u_std(:,k) = controller(sys,cont,x(:,k),U_past,PE);   
+        u(:,k) = controller_expl(sys,cont,x(:,k));    
     end
     toc
     
-    if explore  
-        u(:,k) = controller_expl(sys,cont,x(:,k));       
-    end
-    toc
     % update state estimate
     cont.x_hat_k = cont.A_est*x(:,k)+cont.B_est*u(:,k);
     

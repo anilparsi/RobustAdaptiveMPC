@@ -3,9 +3,13 @@ function optProb = controller_pre(sys,cont)
 % function to generate optimizer using yalmip
 
 % define presolve variables
-x_pre = sdpvar(sys.n,1);
-h_pre = sdpvar(sys.nHtheta,1);
+x_pre = sdpvar(sys.n,1,'full');
+h_pre = sdpvar(sys.nHtheta,1,'full');
+theta_pre = sdpvar(sys.p,1,'full');
 
+
+A_pre = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
+B_pre = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
 %% setup optimization problem
 
 % Declare independent variables
@@ -22,7 +26,7 @@ u_hat = [];
 J = 0;
 for l =1:cont.N
     u_hat = [u_hat  cont.K*x_hat(:,l) + v_lk(:,l)] ;
-    x_hat = [x_hat  cont.A_est*x_hat(:,l) + cont.B_est*u_hat(:,l)];
+    x_hat = [x_hat  A_pre*x_hat(:,l) + B_pre*u_hat(:,l)];
     J = J +  x_hat(:,l)'*cont.Q*x_hat(:,l) + u_hat(:,l)'*cont.R*u_hat(:,l);
 end
 J = J + x_hat(:,cont.N+1)'*cont.P*x_hat(:,cont.N+1);
@@ -67,6 +71,6 @@ Constraints = [Constraints, ...
 
 %% Generate optimizer
 options = sdpsettings('solver','gurobi','verbose',1);
-optProb = optimizer(Constraints,J,options,[x_pre;h_pre],cont.K*x_pre+v_lk(:,1));
+optProb = optimizer(Constraints,J,options,[x_pre;h_pre;theta_pre],cont.K*x_pre+v_lk(:,1));
 
 end
