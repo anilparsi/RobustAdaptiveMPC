@@ -75,9 +75,7 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 1;
-PE = 1;
-cont.rho_PE = 1.0;
+presolve = 0;
 if presolve
     optProb1 = controller_pre(sys,cont);
 end
@@ -87,7 +85,6 @@ end
 toc
 
 rng(1,'twister');
-u_past_sim = [-1 1 -1 -0.5];
 % simulate
 for k = 1:Tsim
     if any(k == [15, 30, 50])
@@ -98,17 +95,14 @@ for k = 1:Tsim
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
     theta_hats(:,k) = cont.theta_hat;
     
-    % Build past input vector  (for PE)  
-    U_past = vec([u(:,k-1:-1:max(1,k-2*sys.n-1)),u_past_sim(1:max(0,2*sys.n+1-k))]);
-    
     % calculate control input   
     tic
     if presolve
         u_std(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
         u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
     else
-%         u_std(:,k) = controller(sys,cont,x(:,k),U_past,PE);   
-        u(:,k) = controller_expl(sys,cont,x(:,k));    
+        u(:,k) = controller(sys,cont,x(:,k));   
+%         u(:,k) = controller_expl(sys,cont,x(:,k));    
     end
     toc
     
@@ -135,3 +129,4 @@ toc
 %%
 figure;plot(x(1,:),x(2,:))
 figure;plot(u)
+%figure; plotregion(-cont.H_theta,-cont.h_theta_k);
