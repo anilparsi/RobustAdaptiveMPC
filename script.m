@@ -55,7 +55,8 @@ cont.nPred_theta = 1;
 cont.nPred_X = 1;
 %% Define simulation parameters
 
-Tsim = 10;
+ref = [repmat([0;0],1,10), repmat([1;1],1,15) ];
+Tsim = size(ref,2)-cont.N+1;
 
 % initialize states and inputs
 x = NaN*ones(sys.n,Tsim+1);
@@ -75,15 +76,15 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 1;
+presolve = 0;
 PE = 1;
 cont.rho_PE = 1.0;
 if presolve
     optProb1 = controller_pre(sys,cont);
 end
-if presolve
-    optProb2 = controller_expl_pre(sys,cont);
-end
+% if presolve
+%     optProb2 = controller_expl_pre(sys,cont);
+% end
 toc
 
 rng(1,'twister');
@@ -104,11 +105,11 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        u_std(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
-        u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        u(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
+%         u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
     else
-%         u_std(:,k) = controller(sys,cont,x(:,k),U_past,PE);   
-        u(:,k) = controller_expl(sys,cont,x(:,k));    
+        u(:,k) = controller(sys,cont,x(:,k),ref(:,k:k+cont.N-1));   
+%         u(:,k) = controller_expl(sys,cont,x(:,k));    
     end
     toc
     
@@ -133,5 +134,17 @@ for k = 1:Tsim
 end
 toc
 %%
-figure;plot(x(1,:),x(2,:))
-figure;plot(u)
+% figure;plot(x(1,:),x(2,:))
+% figure;plotregion(-cont.H_theta,-cont.h_theta_k);
+
+figure;
+subplot(311); hold on;
+plot(x(1,:))
+plot(ref(1,1:Tsim))
+
+subplot(312); hold on;
+plot(x(2,:))
+plot(ref(2,1:Tsim))
+
+subplot(313)
+plot(u)

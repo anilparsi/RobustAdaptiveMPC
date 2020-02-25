@@ -50,6 +50,6 @@ sys.box_x = 5*[ones(sys.n,1);ones(sys.n,1)];
 sys.Box_x_v = 5*[1,1; 1,-1; -1,1; -1,-1]';
 sys.Box_u_v = [1; -1]';
 
-sys.x0 = [2;3];
+sys.x0 = [0;0];
 end
 

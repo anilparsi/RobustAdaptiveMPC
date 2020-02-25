@@ -1,4 +1,4 @@
-function u = controller(sys,cont,xk,U_past,PE)
+function u = controller(sys,cont,xk,ref)
 
 %% setup optimization problem
 
@@ -17,9 +17,9 @@ J = 0;
 for l =1:cont.N
     u_hat = [u_hat  cont.K*x_hat(:,l) + v_lk(:,l)] ;
     x_hat = [x_hat  cont.A_est*x_hat(:,l) + cont.B_est*u_hat(:,l)];
-    J = J +  x_hat(:,l)'*cont.Q*x_hat(:,l) + u_hat(:,l)'*cont.R*u_hat(:,l);
+    J = J +  (x_hat(:,l)-ref(:,l))'*cont.Q*(x_hat(:,l)-ref(:,l)) + u_hat(:,l)'*cont.R*u_hat(:,l);
 end
-J = J + x_hat(:,cont.N+1)'*cont.P*x_hat(:,cont.N+1);
+J = J + (x_hat(:,cont.N+1)-ref(:,l))'*cont.P*(x_hat(:,cont.N+1)-ref(:,l));
 
 % define state dependent variables
 x_jlk = [];
@@ -56,102 +56,16 @@ end
 
 % define terminal constraints
 Constraints = [Constraints, ...
-               z_lk(:,cont.N+1) == zeros(sys.n,1), ...
+               z_lk(:,cont.N+1) == ref(:,end), ...
                 cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
             
 options = sdpsettings('solver','gurobi','verbose',0,'debug',0);
 
-if PE
-% persistency of excitation (for scalars)
-    if sys.m>1
-       error('Persistency of excitation can be implemented for single input systems only.\n');       
-    end
-    
-    omega_bar_PE = -cont.rho_PE*eye(sys.n);
-    for k =0:sys.n
-        omega_bar_PE = omega_bar_PE + U_past(k+1:k+sys.n)*U_past(k+1:k+sys.n)';
-    end    
-    
-%     assert(all(eig(omega_bar_PE)>0),'reduce rho_PE value, or change initialization')
-    
-    alpha_PE = 1-U_past(1:sys.n)'*(omega_bar_PE\U_past(1:sys.n));
-    beta_PE = 0;
-    u_phi_vec = 0;
-    for j = 1:sys.n
-        beta_PE = beta_PE - U_past(j)*U_past(j+1:j+sys.n)'*(omega_bar_PE\U_past(1:sys.n));
-        u_phi_vec = u_phi_vec + U_past(j)*U_past(j+1:j+sys.n);
-    end
-    gamma_PE = U_past(1:sys.n)'*U_past(1:sys.n) - cont.rho_PE - u_phi_vec'*(omega_bar_PE\u_phi_vec);
-    
-    bounds = roots([alpha_PE,2*beta_PE,gamma_PE]);
-    bounds = sort(bounds);
-    try
-    if alpha_PE < 0
-        % stay within the bounds
-        Constraints0 = [Constraints,...
-                        bounds(1) <= u_hat(1) <= bounds(2)   ];
-        diagnostics = optimize(Constraints0,J,options);
-        if diagnostics.problem
-           error('Infeasibility due to PE') 
-        end
-        u = value(u_hat(:,1));
-    else
-        % stay out of the bounds
-        Constraints1 = [Constraints,...
-                        u_hat(1) <= bounds(1)   ];
-        Constraints2 = [Constraints,...  
-                        u_hat(1) >= bounds(2) ];
-                    
-                    
-        diagnostics1 = optimize(Constraints1,J,options);
-        if ~diagnostics1.problem
-            J1 = value(J);
-            u1 = value(u_hat(:,1));
-        else
-            J1 = Inf;
-            u1 = [NaN];
-        end
-        
-        
-        diagnostics2 = optimize(Constraints2,J,options);
-        if ~diagnostics2.problem
-            J2 = value(J);
-            u2 = value(u_hat(:,1));
-        else
-            J2 = Inf;
-            u2 = [NaN];
-        end
-        
-        if diagnostics2.problem && diagnostics1.problem
-           error('Infeasibility due to PE') 
-        end
-        
-        if J1<J2
-            u = u1;
-        else
-            u = u2;
-        end
-        
-    end
-    catch
-        diagnostics = optimize(Constraints,J,options);
-        if diagnostics.problem
-           error('Infeasibility even without PE') 
-        end
-        u = value(u_hat(:,1));
-    end
-%     % Verify PE constraint for computed input
-%     omega_new = -cont.rho_PE*eye(sys.n+1);
-%     U_new = [u; U_past];
-%     for k =0:sys.n
-%         omega_new = omega_new + U_new(k+1:k+sys.n+1)*U_new(k+1:k+sys.n+1)';
-%     end 
-%     assert(all(eig(omega_new)>-1e-5),'Something is wrong')
-else
-    diagnostics = optimize(Constraints,J,options);
+diagnostics = optimize(Constraints,J,options);
+if ~diagnostics.problem
     u = value(u_hat(:,1));
+else
+    u = [NaN];
 end
-
-
 end
 
