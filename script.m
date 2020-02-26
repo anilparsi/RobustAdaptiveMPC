@@ -22,7 +22,7 @@ cont.R_L = chol(cont.R);
 cont.blk = 10;
 
 % prestabilizing gain
-cont.K = [-0.6562  -0.4702];
+cont.K = prestab_controller(sys,cont,[]);
 
 % parameter bounds
 cont.H_theta = sys.H_theta;
@@ -30,7 +30,7 @@ cont.h_theta_k = sys.h_theta;
 cont.h_theta_0 = sys.h_theta;
 
 % Estimation parameters
-cont.mu = 2; % compute properly later
+cont.mu = 2; 
 cont.theta_hat = [0.5;0.5;0.5];
 cont.x_hat_k = sys.x0;
 cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
@@ -52,7 +52,7 @@ cont.h_T = 1;
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 5;
+cont.nPred_X = 1;
 %% Define simulation parameters
 
 Tsim = 10;
@@ -77,8 +77,8 @@ true_sys = model(sys,x(:,1));
 tic
 presolve = 1;
 if presolve
-    optProb1 = controller_pre(sys,cont);
-%     optProb2 = controller_expl_pre(sys,cont);
+%     optProb1 = controller_pre(sys,cont);
+    optProb2 = controller_expl_pre(sys,cont);
 end
 toc
 
@@ -96,8 +96,8 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
-%         [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+%         [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
+        [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
         if a1
             error(a5.infostr)
         end
@@ -128,6 +128,18 @@ for k = 1:Tsim
 end
 toc
 %%
-figure;plot(x(1,:),x(2,:),'-*')
-figure;plot(u,'-*')
-%figure; plotregion(-cont.H_theta,-cont.h_theta_k);
+f = 60;
+h = figure(f); 
+subplot(311)
+hold on;
+plot(x(1,:),'-*')
+
+subplot(312)
+hold on;
+plot(x(1,:),'-*')
+
+subplot(313)
+hold on;
+plot(u,'-*')
+
+% h = figure(f); plotregion(-cont.H_theta,-cont.h_theta_k);
