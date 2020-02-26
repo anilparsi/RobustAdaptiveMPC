@@ -52,7 +52,7 @@ cont.h_T = 1;
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 1;
+cont.nPred_X = 5;
 %% Define simulation parameters
 
 Tsim = 10;
@@ -77,12 +77,12 @@ true_sys = model(sys,x(:,1));
 tic
 presolve = 1;
 if presolve
-%     optProb1 = controller_pre(sys,cont);
-    optProb2 = controller_expl_pre(sys,cont);
+    optProb1 = controller_pre(sys,cont);
+%     optProb2 = controller_expl_pre(sys,cont);
 end
 toc
 
-rng(1,'twister');
+rng(10,'twister');
 % simulate
 for k = 1:Tsim
     if any(k == [15, 30, 50])
@@ -96,8 +96,8 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-%         [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
-        [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
+%         [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
         if a1
             error(a5.infostr)
         end
@@ -129,17 +129,23 @@ end
 toc
 %%
 f = 60;
-h = figure(f); 
+h = figure(f); f=f+1;
 subplot(311)
 hold on;
-plot(x(1,:),'-*')
+plot(0:Tsim,x(1,:),'-*')
+ylabel('$x_1$')
 
 subplot(312)
 hold on;
-plot(x(1,:),'-*')
+plot(0:Tsim,x(2,:),'-*')
+ylabel('$x_2$')
 
 subplot(313)
 hold on;
-plot(u,'-*')
+plot(0:Tsim-1,u,'-*')
+xlim([0 Tsim])
+ylabel('$u$')
 
-% h = figure(f); plotregion(-cont.H_theta,-cont.h_theta_k);
+% h = figure(f);f=f+1;
+% plotregion(-cont.H_theta,-cont.h_theta_k);
+% xlim([-1 1]);ylim([-1 1]);zlim([-1 1]);

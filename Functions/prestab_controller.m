@@ -39,7 +39,7 @@ else
             ] >= 0];
         end
 
-    options = sdpsettings('verbose',1);
+    options = sdpsettings('verbose',0);
     diagnostics = optimize(Constraints,gamma,options);
     if diagnostics.problem
        error(diagnostics.info) 
