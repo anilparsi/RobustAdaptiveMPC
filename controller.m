@@ -69,7 +69,7 @@ J = sum(stage_cost_max);
 stage_cost_max = sdpvar(cont.N+1,1,'full');
 J = sum(stage_cost_max);
 
-costConstraints = [norm(cont.Q_L*xk,'inf')+norm(cont.R_L*(cont.K*xk+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+costConstraints = [norm(cont.R_L*(cont.K*xk+v_lk(:,1)),'inf')<=stage_cost_max(1)];
 
 for l = 2:cont.N
     for j = 1:cont.nx_v                

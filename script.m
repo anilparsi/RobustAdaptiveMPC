@@ -7,11 +7,11 @@ sys = system_desc();
 %% Define controller parameters
 
 % prediction horizon
-cont.N = 10;
+cont.N = 8;
 
 % cost matrices
 cont.Q = eye(sys.n);
-cont.R = eye(sys.m);
+cont.R = 0.5*eye(sys.m);
 cont.P = [2.8  0.56;
           0.56 2.5];
 cont.Q_L = chol(cont.Q);
@@ -52,7 +52,7 @@ cont.h_T = 1;
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 1;
+cont.nPred_X = 5;
 %% Define simulation parameters
 
 Tsim = 10;
@@ -75,12 +75,10 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 0;
+presolve = 1;
 if presolve
     optProb1 = controller_pre(sys,cont);
-end
-if presolve
-    optProb2 = controller_expl_pre(sys,cont);
+%     optProb2 = controller_expl_pre(sys,cont);
 end
 toc
 
@@ -98,11 +96,14 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        u_std(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
-        u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
+%         [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        if a1
+            error(a5.infostr)
+        end
     else
-        u(:,k) = controller(sys,cont,x(:,k));   
-%         u(:,k) = controller_expl(sys,cont,x(:,k));    
+        u_std(:,k) = controller(sys,cont,x(:,k));   
+        u(:,k) = controller_expl(sys,cont,x(:,k));    
     end
     toc
     
@@ -112,7 +113,7 @@ for k = 1:Tsim
     % Apply to true system
     true_sys = true_sys.simulate(u(:,k));
     x(:,k+1) = true_sys.x;
-    J = J + x(:,k+1)'*cont.Q*x(:,k+1) + u(:,k)'*cont.R*u(:,k);
+    J = J + norm(cont.Q_L*x(:,k+1),'inf') + norm(cont.R_L*u(:,k),'inf');
     
     % update regressors
         new_Dk = zeros(sys.n,sys.p);    
@@ -127,6 +128,6 @@ for k = 1:Tsim
 end
 toc
 %%
-figure;plot(x(1,:),x(2,:))
-figure;plot(u)
+figure;plot(x(1,:),x(2,:),'-*')
+figure;plot(u,'-*')
 %figure; plotregion(-cont.H_theta,-cont.h_theta_k);

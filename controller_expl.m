@@ -112,9 +112,9 @@ exploreConstraints = [exploreConstraints,...
                     ];
 % implement containment conditions of tubes
 for l = 2:cont.nPred_X
-%     exploreConstraints = [exploreConstraints, ...
-%     (sys.F+sys.G*cont.K)*z_til_lk(:,l) + sys.G*v_lk(:,l) + alpha_til_lk(l)*cont.f_bar <= ones(sys.nc,1)
-%     ];
+    exploreConstraints = [exploreConstraints, ...
+    (sys.F+sys.G*cont.K)*z_til_lk(:,l) + sys.G*v_lk(:,l) + alpha_til_lk(l)*cont.f_bar <= ones(sys.nc,1)
+    ];
      for j = 1:cont.nx_v
          exploreConstraints = [exploreConstraints, ...
              Lambda_til_jlk(:,:,j,l-1)*h_theta_til + cont.H_x*d_til_jlk(:,j,l-1) - alpha_til_lk(l+1)*ones(cont.nHx,1) <= -cont.w_bar];
@@ -135,7 +135,7 @@ stage_cost_max = sdpvar(cont.N+1,1,'full');
 J = sum(stage_cost_max);
 
 % define cost constraints
-costConstraints = [norm(cont.Q_L*xk,'inf')+norm(cont.R_L*(cont.K*xk+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+costConstraints = [norm(cont.R_L*(cont.K*xk+v_lk(:,1)),'inf')<=stage_cost_max(1)];
 
 for l = 2:cont.N
     for j = 1:cont.nx_v                
@@ -159,7 +159,7 @@ end
 
 %% Solve problem
 Constraints = [stdConstraints;exploreConstraints;costConstraints];    
-options = sdpsettings('solver','ipopt');%,'fmincon','fmincon.Maxiter',20
+options = sdpsettings('solver','ipopt','verbose',0);
 diagnostics = optimize(Constraints,J,options);
 if diagnostics.problem
    error(diagnostics.info) 
