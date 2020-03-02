@@ -153,7 +153,7 @@ end
 % terminal cost
 for j = 1:cont.nx_v
     costConstraints = [costConstraints, ... 
-        (cont.P)*alpha_lk(cont.N+1)*cont.x_v(:,j) <= stage_cost_max(cont.N+1)
+        norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf') <= stage_cost_max(cont.N+1)
     ];
 end
 
