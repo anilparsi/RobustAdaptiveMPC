@@ -6,8 +6,8 @@ x_pre = sdpvar(sys.n,1,'full');
 h_pre = sdpvar(sys.nHtheta,1,'full');
 theta_pre = sdpvar(sys.p,1,'full');
 
-A_pre = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
-B_pre = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
+A_pre = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
+B_pre = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
 %% Part for standard constraints
 % Declare independent variables
 % l goes from 1:N
@@ -58,7 +58,8 @@ end
 % define terminal constraints
 stdConstraints = [stdConstraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
-                cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
+                alpha_lk(cont.N+1) <= cont.alpha_bar...
+                alpha_lk(cont.N+1) >= cont.alpha_min];      
 
 %% Part for exploration
 

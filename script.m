@@ -7,11 +7,11 @@ sys = system_desc();
 %% Define controller parameters
 
 % prediction horizon
-cont.N = 8;
+cont.N = 10;
 
 % cost matrices
 cont.Q = eye(sys.n);
-cont.R = 0.5*eye(sys.m);
+cont.R = eye(sys.m);
 cont.P = [2.8  0.56;
           0.56 2.5];
 cont.Q_L = chol(cont.Q);
@@ -21,8 +21,17 @@ cont.R_L = chol(cont.R);
 % block size for updating h_theta_k
 cont.blk = 10;
 
+% Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
+cont.H_x = [eye(sys.n); -eye(sys.n)];
+cont.vec_1_x = ones(length(cont.H_x),1);
+cont.nHx = size(cont.H_x,1);  % denoted u in Lorenzen(2019)
+cont.x_v = [1 1; 1 -1; -1 1; -1 -1 ]';
+cont.nx_v = length(cont.x_v); % number of vertices
+
 % prestabilizing gain
-cont.K = prestab_controller(sys,cont,[]);
+addpath('Functions')
+cont.w_bar = compute_wbar(sys,cont);
+[cont.K,cont.alpha_bar,cont.alpha_min] = prestab_controller(sys,cont);
 
 % parameter bounds
 cont.H_theta = sys.H_theta;
@@ -31,24 +40,14 @@ cont.h_theta_0 = sys.h_theta;
 
 % Estimation parameters
 cont.mu = 2; 
-cont.theta_hat = [0.5;0.5;0.5];
+cont.theta_hat = [0.5;0.5;];
 cont.x_hat_k = sys.x0;
-cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
-cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
+cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
+cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
 
-% Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
-cont.H_x = [eye(sys.n); -eye(sys.n)];
-cont.vec_1_x = ones(length(cont.H_x),1);
-cont.nHx = size(cont.H_x,1);  % denoted u in Lorenzen(2019)
-cont.x_v = [1 1; 1 -1; -1 1; -1 -1 ]';
-cont.nx_v = length(cont.x_v); % number of vertices
-
-% Calculate constants fBar and wBar
-cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
-cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if disturbance changed
 
 % Define terminal constraint: z_N|k = 0; h_T*alpha_N|k <= 1;
-cont.h_T = 1;
+cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
@@ -77,8 +76,8 @@ true_sys = model(sys,x(:,1));
 tic
 presolve = 1;
 if presolve
-    optProb1 = controller_pre(sys,cont);
-%     optProb2 = controller_expl_pre(sys,cont);
+%     optProb1 = controller_pre(sys,cont);
+    optProb2 = controller_expl_pre(sys,cont);
 end
 toc
 
@@ -96,8 +95,8 @@ for k = 1:Tsim
     % calculate control input   
     tic
     if presolve
-        [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
-%         [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+%         [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
+        [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
         if a1
             error(a5.infostr)
         end

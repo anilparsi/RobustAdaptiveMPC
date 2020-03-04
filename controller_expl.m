@@ -50,8 +50,8 @@ end
 % define terminal constraints
 stdConstraints = [stdConstraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
-                cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
-
+                alpha_lk(cont.N+1) <= cont.alpha_bar ...
+                alpha_lk(cont.N+1) >= cont.alpha_min];  
 %% Part for exploration
 
 % Declare variables for exploration
@@ -153,7 +153,7 @@ end
 % terminal cost
 for j = 1:cont.nx_v
     costConstraints = [costConstraints, ... 
-        norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf') <= stage_cost_max(cont.N+1)
+        alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf')) <= stage_cost_max(cont.N+1)
     ];
 end
 

@@ -57,7 +57,8 @@ end
 % define terminal constraints
 Constraints = [Constraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
-                cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
+                alpha_lk(cont.N+1) <= cont.alpha_bar ...
+                alpha_lk(cont.N+1) >= cont.alpha_min];      
             
 
 
