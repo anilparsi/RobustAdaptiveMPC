@@ -28,7 +28,7 @@ sys = boundedComplexity(sys);
 sys.nHtheta = length(sys.h_theta);
 
 % define disturbance bounds: H_w*w <= h_w
-sys.w_bound = 0.05;
+sys.w_bound = 0.1;
 sys.H_w = [eye(sys.n);-eye(sys.n)]/sys.w_bound;
 sys.h_w = [ones(sys.n,1);ones(sys.n,1)];
 sys.nHw = length(sys.h_w);
@@ -48,6 +48,6 @@ sys.box_x = 5*[ones(sys.n,1);ones(sys.n,1)];
 sys.Box_x_v = 5*[1,1; 1,-1; -1,1; -1,-1]';
 sys.Box_u_v = [1; -1]';
 
-sys.x0 = [1;2];
+sys.x0 = [1;1.5];
 end
 

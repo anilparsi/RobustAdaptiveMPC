@@ -7,7 +7,7 @@ sys = system_desc();
 %% Define controller parameters
 
 % prediction horizon
-cont.N = 10;
+cont.N = 8;
 
 % cost matrices
 cont.Q = eye(sys.n);
@@ -51,7 +51,7 @@ cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 5;
+cont.nPred_X = 7;
 %% Define simulation parameters
 
 Tsim = 10;
