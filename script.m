@@ -129,22 +129,27 @@ toc
 %%
 f = 60;
 h = figure(f); f=f+1;
-subplot(311)
+subplot(411)
 hold on;
 plot(0:Tsim,x(1,:),'-*')
 ylabel('$x_1$')
 
-subplot(312)
+subplot(412)
 hold on;
 plot(0:Tsim,x(2,:),'-*')
 ylabel('$x_2$')
 
-subplot(313)
+subplot(413)
 hold on;
-plot(0:Tsim-1,u,'-*')
+plot(0:Tsim-1,u(1,:),'-*')
 xlim([0 Tsim])
-ylabel('$u$')
+ylabel('$u_1$')
 
+subplot(414)
+hold on;
+plot(0:Tsim-1,u(2,:),'-*')
+xlim([0 Tsim])
+ylabel('$u_2$')
 % h = figure(f);f=f+1;
 % plotregion(-cont.H_theta,-cont.h_theta_k);
 % xlim([-1 1]);ylim([-1 1]);zlim([-1 1]);

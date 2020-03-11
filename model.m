@@ -1,6 +1,6 @@
 classdef model
 properties (Constant)
-    theta_true = [0.95; 0.5];
+    theta_true = [0.95; 0.3];
 end
 properties
     A_true 
