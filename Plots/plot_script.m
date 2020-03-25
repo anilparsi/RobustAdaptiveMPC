@@ -254,7 +254,7 @@ hold on;
 plotregionLine(-cont_P.H_theta,-cont_P.h_theta_k,[],[],'b',[],[],'-');
 plotregionLine(-cont_D1.H_theta,-cont_D1.h_theta_k,[],[],'r',[],[],'-.');
 plotregionLine(-cont_D2.H_theta,-cont_D2.h_theta_k,[],[],'k',[],[],'--');
-plot(0.9,0.3,'m^')
+plot(0.95,0.3,'ms','MarkerSize',3,'MarkerFaceColor','red')
 xlim([-1 1]);ylim([-1 1]);
 xlabel('$\theta_1$')
 ylabel('$\theta_2$')
@@ -262,3 +262,31 @@ legend('PAMPC','DAMPC$_2$','DAMPC$_5$',...
       'Orientation','Vertical','Location','southeast')
   
 export_fig parameterSet.eps
+%% Plot heatmap of nominal costs
+
+nom = load('nom_data.mat');
+
+h = figure(f);clf; f = f+1; 
+h.Units = 'centimeters';
+h.WindowStyle = 'normal';
+h.Position = [2 2 8 5.5];
+hold on;
+t1b = [-0.5,1];
+t2b = [-0.4;0.71];
+pts = 51;
+surf(linspace(t1b(1),t1b(2),pts),linspace(t2b(1),t2b(2),pts),nom.J_all'-10);
+colormap summer
+shading interp
+plotregionLine(-cont_P.H_theta,-cont_P.h_theta_k,[],[],'b',[],[],'-');
+plotregionLine(-cont_D1.H_theta,-cont_D1.h_theta_k,[],[],'r',[],[],'-.');
+plotregionLine(-cont_D2.H_theta,-cont_D2.h_theta_k,[],[],'k',[],[],'--'); 
+plot(0.95,0.3,'ms','MarkerSize',3,'MarkerFaceColor','red')
+
+view([0 0 1])
+xlim(t1b);ylim(t2b);
+colorbar('Ticks',[-7.5,-7,-6.5,-6,-5.5,-5,-4.5],...
+         'TickLabels',{'2.5','3','3.5','4','4.5','5','5.5'});
+xlabel('$\theta_1$')
+ylabel('$\theta_2$')
+% title('Nominal Costs')
+export_fig nominalCost.eps
