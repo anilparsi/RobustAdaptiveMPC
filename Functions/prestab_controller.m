@@ -13,15 +13,15 @@ for k  = 1:size(sys.H_theta_v,2)
     Bc(:,:,k) = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(sys.H_theta_v(:,k),[1,1,sys.p])),3);       
 end 
 
-
+ 
 %% Finding a control gain to ensure RPI of X0
-K_var = sdpvar(sys.m,sys.n);
+K_var = sdpvar(sys.m,sys.n,'full');
 alpha_inv = sdpvar(1);
 Cons_K = [];
 
 for k = 1:size(sys.H_theta_v,2)
     for j = 1:size(cont.x_v,2)
-       Cons_K = [Cons_K; max(cont.H_x*(Ac(:,:,k)+Bc(:,:,k)*K_var)*cont.x_v(:,j))<= cont.vec_1_x - cont.w_bar*alpha_inv; ];
+       Cons_K = [Cons_K; cont.H_x*(Ac(:,:,k)+Bc(:,:,k)*K_var)*cont.x_v(:,j)<= cont.vec_1_x - cont.w_bar*alpha_inv; ];
     end
 end
 for j = 1:size(cont.x_v,2)

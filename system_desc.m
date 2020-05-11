@@ -7,10 +7,10 @@ sys.Ap(:,:,1) = [0.1 0
                  0    0.1];
 sys.Ap(:,:,2) = zeros(2,2);
 
-sys.B0 = [1.0 0.4;
-          0.2 0.4];
+sys.B0 = [0.8 0.2;
+          0.2 0.5];
 sys.Bp(:,:,1) = zeros(2,2);
-sys.Bp(:,:,2) = [0 0.5; 0 0.4];
+sys.Bp(:,:,2) = [0 0.2; 0 0.2];
 
 % define dimensions
 sys.n = size(sys.Bp,1);
@@ -35,10 +35,10 @@ sys.nHw = length(sys.h_w);
 
 
 % define state and input constraints: F*x + G*u <= vec_1_cons
-sys.F = [-0.1 0;
-         0 -0.1; 
+sys.F = [-1/4 0;
+         0 -1/4; 
          zeros(4,2)];
-sys.G = [zeros(2,2); 1 0; -1/0.5 0; 0 1/2; 0 -1/2];
+sys.G = [zeros(2,2); 1/2 0; -1/2 0; 0 1/2; 0 -1/2];
 sys.nc = size(sys.F,1);
 sys.vec_1_cons = ones(sys.nc,1);
 
@@ -48,6 +48,6 @@ sys.box_x = 5*[ones(sys.n,1);ones(sys.n,1)];
 sys.Box_x_v = 5*[1,1; 1,-1; -1,1; -1,-1]';
 sys.Box_u_v = [1; -1]';
 
-sys.x0 = [1;1.5];
+sys.x0 = [0;0];
 end
 

@@ -1,4 +1,4 @@
-function u = controller_expl(sys,cont,xk)
+function u = controller_expl(sys,cont,xk,ref)
 
 %% Part for standard constraints
 % Declare independent variables
@@ -16,7 +16,7 @@ d_jlk = [];
 D_jlk = [];
 for l = 2:cont.N    
     x_jlk = cat(3,x_jlk,repmat(z_lk(:,l),1,cont.nx_v)+alpha_lk(l)*cont.x_v);
-    u_jlk = cat(3,u_jlk,repmat(v_lk(:,l),1,cont.nx_v)+cont.K*x_jlk(:,:,l-1));
+    u_jlk = cat(3,u_jlk,repmat(v_lk(:,l)-cont.K*ref(l).x_s,1,cont.nx_v)+cont.K*x_jlk(:,:,l-1));
     
     d_jlk = cat(3,d_jlk,sys.A0*x_jlk(:,:,l-1)+sys.B0*u_jlk(:,:,l-1) - repmat(z_lk(:,l+1),1,cont.nx_v));
     D_temp = [];
@@ -30,13 +30,13 @@ end
 stdConstraints = [Lambda_jlk(:)>=0,Lambda_1k(:)>=0];
 stdConstraints = [stdConstraints,z_lk(:,1)==xk,alpha_lk(1)==0];
 stdConstraints = [stdConstraints,...
-                    (sys.F+sys.G*cont.K)*xk + sys.G*v_lk(:,1) <= ones(sys.nc,1),...
-                    Lambda_1k*cont.h_theta_k + cont.H_x*(sys.A0*xk+sys.B0*(cont.K*xk+v_lk(:,1))-z_lk(:,2)) - alpha_lk(2)*ones(cont.nHx,1) <= -cont.w_bar,...
-                    cont.H_x*D_mult(sys,xk,cont.K*xk+v_lk(:,1)) == Lambda_1k*cont.H_theta
+                    (sys.F+sys.G*cont.K)*xk + sys.G*(v_lk(:,1)-cont.K*ref(1).x_s) <= ones(sys.nc,1),...
+                    Lambda_1k*cont.h_theta_k + cont.H_x*(sys.A0*xk+sys.B0*(cont.K*(xk-ref(1).x_s)+v_lk(:,1))-z_lk(:,2)) - alpha_lk(2)*ones(cont.nHx,1) <= -cont.w_bar,...
+                    cont.H_x*D_mult(sys,xk,cont.K*(xk-ref(1).x_s)+v_lk(:,1)) == Lambda_1k*cont.H_theta
                     ];
 for l = 2:cont.N
      stdConstraints = [stdConstraints, ...
-         (sys.F+sys.G*cont.K)*z_lk(:,l) + sys.G*v_lk(:,l) + alpha_lk(l)*cont.f_bar <= ones(sys.nc,1)];         
+         (sys.F+sys.G*cont.K)*z_lk(:,l) + sys.G*(v_lk(:,l)-cont.K*ref(l).x_s) + alpha_lk(l)*cont.f_bar <= ones(sys.nc,1)];         
      
      for j = 1:cont.nx_v
          stdConstraints = [stdConstraints, ...
@@ -49,8 +49,8 @@ end
 
 % define terminal constraints
 stdConstraints = [stdConstraints, ...
-               z_lk(:,cont.N+1) == zeros(sys.n,1), ...
-                alpha_lk(cont.N+1) <= cont.alpha_bar ...
+               z_lk(:,cont.N+1) == ref(end).x_s, ...
+                alpha_lk(cont.N+1) <= ref(end).alpha_T...
                 alpha_lk(cont.N+1) >= cont.alpha_min];  
 %% Part for exploration
 
@@ -67,17 +67,17 @@ alpha_til_lk = sdpvar(1,cont.nPred_X+1,'full');
 % predict state evolution
 x_hat = xk;
 for l = 1:cont.nPred_theta-1
-    x_hat = [x_hat  (cont.A_est+cont.B_est*cont.K)*x_hat(:,l) + cont.B_est*v_lk(:,l)];
+    x_hat = [x_hat  (cont.A_est+cont.B_est*cont.K)*x_hat(:,l) + cont.B_est*(v_lk(:,l)-cont.K*ref(1).x_s)];
 end  
 
 % predict new constraints on theta
-H_pred = [sys.H_w*D_mult(sys,xk,cont.K*xk+v_lk(:,1))];
-h_pred = [sys.h_w + sys.H_w*D_mult(sys,xk,cont.K*xk+v_lk(:,1))*cont.theta_hat];
+H_pred = [sys.H_w*D_mult(sys,xk,cont.K*(xk-ref(1).x_s)+v_lk(:,1))];
+h_pred = [sys.h_w + sys.H_w*D_mult(sys,xk,cont.K*(xk-ref(1).x_s)+v_lk(:,1))*cont.theta_hat];
 for l = 2:cont.nPred_theta
     H_pred = [H_pred; 
-              sys.H_w*D_mult(sys,x_hat(:,l),cont.K*x_hat(:,l)+v_lk(:,l))];
+              sys.H_w*D_mult(sys,x_hat(:,l),cont.K*(x_hat(:,l)-ref(1).x_s)+v_lk(:,l))];
     h_pred = [h_pred; 
-              sys.h_w + sys.H_w*D_mult(sys,x_hat(:,l),cont.K*x_hat(:,l)+v_lk(:,l))*cont.theta_hat];
+              sys.h_w + sys.H_w*D_mult(sys,x_hat(:,l),cont.K*(x_hat(:,l)-ref(1).x_s)+v_lk(:,l))*cont.theta_hat];
 end
 
 % Append to H_theta
@@ -92,7 +92,7 @@ D_til_jlk = [];
 
 for l = 2:cont.nPred_X+1
     x_til_jlk = cat(3,x_til_jlk,repmat(z_til_lk(:,l),1,cont.nx_v)+alpha_til_lk(l)*cont.x_v);
-    u_til_jlk = cat(3,u_til_jlk,repmat(v_lk(:,l),1,cont.nx_v)+cont.K*x_til_jlk(:,:,l-1));
+    u_til_jlk = cat(3,u_til_jlk,repmat(v_lk(:,l)-cont.K*ref(l).x_s,1,cont.nx_v)+cont.K*x_til_jlk(:,:,l-1));
 end
 for l = 2:cont.nPred_X    
     d_til_jlk = cat(3,d_til_jlk,sys.A0*x_til_jlk(:,:,l-1)+sys.B0*u_til_jlk(:,:,l-1) - repmat(z_til_lk(:,l+1),1,cont.nx_v));
@@ -107,13 +107,13 @@ end
 exploreConstraints = [Lambda_til_jlk(:)>=0,Lambda_til_1k(:)>=0];
 exploreConstraints = [exploreConstraints,z_til_lk(:,1)==xk,alpha_til_lk(1)==0];
 exploreConstraints = [exploreConstraints,...
-                    Lambda_til_1k*h_theta_til + cont.H_x*(sys.A0*xk+sys.B0*(cont.K*xk+v_lk(:,1))-z_til_lk(:,2)) - alpha_til_lk(2)*ones(cont.nHx,1) <= -cont.w_bar,...
-                    cont.H_x*D_mult(sys,xk,cont.K*xk+v_lk(:,1)) == Lambda_til_1k*H_theta_til
+                    Lambda_til_1k*h_theta_til + cont.H_x*(sys.A0*xk+sys.B0*(cont.K*(xk-ref(1).x_s)+v_lk(:,1))-z_til_lk(:,2)) - alpha_til_lk(2)*ones(cont.nHx,1) <= -cont.w_bar,...
+                    cont.H_x*D_mult(sys,xk,cont.K*(xk-ref(1).x_s)+v_lk(:,1)) == Lambda_til_1k*H_theta_til
                     ];
 % implement containment conditions of tubes
 for l = 2:cont.nPred_X
     exploreConstraints = [exploreConstraints, ...
-    (sys.F+sys.G*cont.K)*z_til_lk(:,l) + sys.G*v_lk(:,l) + alpha_til_lk(l)*cont.f_bar <= ones(sys.nc,1)
+    (sys.F+sys.G*cont.K)*z_til_lk(:,l) + sys.G*(v_lk(:,l)-cont.K*ref(l).x_s) + alpha_til_lk(l)*cont.f_bar <= ones(sys.nc,1)
     ];
      for j = 1:cont.nx_v
          exploreConstraints = [exploreConstraints, ...
@@ -135,17 +135,17 @@ stage_cost_max = sdpvar(cont.N+1,1,'full');
 J = sum(stage_cost_max);
 
 % define cost constraints
-costConstraints = [norm(cont.R_L*(cont.K*xk+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+costConstraints = [norm(cont.R_L*(cont.K*(xk-ref(1).x_s)+v_lk(:,1)),'inf')<=stage_cost_max(1)];
 
 for l = 2:cont.N
     for j = 1:cont.nx_v                
         if l<=cont.nPred_X+1
             costConstraints = [costConstraints, ... 
-                norm(cont.Q_L*x_til_jlk(:,j,l-1),'inf') +  norm(cont.R_L*(cont.K*x_til_jlk(:,j,l-1)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+                norm(cont.Q_L*(x_til_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_til_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
             ];
         else
             costConstraints = [costConstraints, ... 
-                norm(cont.Q_L*x_jlk(:,j,l-1),'inf') +  norm(cont.R_L*(cont.K*x_jlk(:,j,l-1)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+                norm(cont.Q_L*(x_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
             ];
         end
     end
@@ -153,18 +153,19 @@ end
 % terminal cost
 for j = 1:cont.nx_v
     costConstraints = [costConstraints, ... 
-        alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf')) <= stage_cost_max(cont.N+1)
+        alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*(cont.K*cont.x_v(:,j)+ref(end).u_s),'inf')) <= stage_cost_max(cont.N+1)
     ];
 end
 
 %% Solve problem
 Constraints = [stdConstraints;exploreConstraints;costConstraints];    
 options = sdpsettings('solver','ipopt','verbose',0);
+options.ipopt.max_iter = 1500;
 diagnostics = optimize(Constraints,J,options);
 if diagnostics.problem
    error(diagnostics.info) 
 end
-u = value(cont.K*xk + v_lk(:,1));
+u = value(cont.K*(xk-ref(1).x_s) + v_lk(:,1));
 
 end
 
