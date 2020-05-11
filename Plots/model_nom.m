@@ -1,8 +1,6 @@
-classdef model
-properties (Constant)
-    theta_true = [0.95; 0.3];
-end
+classdef model_nom
 properties
+    theta_true
     A_true 
     B_true 
     w_bound
@@ -12,7 +10,8 @@ end
 
 methods
     % Constructor
-    function obj = model(sys,x0)
+    function obj = model_nom(sys,theta0,x0)
+        obj.theta_true = theta0;
         obj.A_true = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(obj.theta_true,[1,1,sys.p])),3);
         obj.B_true = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(obj.theta_true,[1,1,sys.p])),3);
         

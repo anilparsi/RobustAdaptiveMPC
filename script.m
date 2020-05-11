@@ -7,7 +7,7 @@ sys = system_desc();
 %% Define controller parameters
 
 % prediction horizon
-cont.N = 10;
+cont.N = 8;
 
 % cost matrices
 cont.Q = eye(sys.n);
@@ -21,21 +21,6 @@ cont.R_L = chol(cont.R);
 % block size for updating h_theta_k
 cont.blk = 10;
 
-% prestabilizing gain
-cont.K = [-0.6562  -0.4702];
-
-% parameter bounds
-cont.H_theta = sys.H_theta;
-cont.h_theta_k = sys.h_theta;
-cont.h_theta_0 = sys.h_theta;
-
-% Estimation parameters
-cont.mu = 2; % compute properly later
-cont.theta_hat = [0.5;0.5;0.5];
-cont.x_hat_k = sys.x0;
-cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
-cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
-
 % Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
 cont.H_x = [eye(sys.n); -eye(sys.n)];
 cont.vec_1_x = ones(length(cont.H_x),1);
@@ -43,16 +28,30 @@ cont.nHx = size(cont.H_x,1);  % denoted u in Lorenzen(2019)
 cont.x_v = [1 1; 1 -1; -1 1; -1 -1 ]';
 cont.nx_v = length(cont.x_v); % number of vertices
 
-% Calculate constants fBar and wBar
-cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
-cont.w_bar = [0.1; 0.1; 0.1; 0.1];  % manually calculated. need to verify if disturbance changed
+% prestabilizing gain
+addpath('Functions')
+cont.w_bar = compute_wbar(sys,cont);
+[cont.K,cont.alpha_bar,cont.alpha_min] = prestab_controller(sys,cont);
+
+% parameter bounds
+cont.H_theta = sys.H_theta;
+cont.h_theta_k = sys.h_theta;
+cont.h_theta_0 = sys.h_theta;
+
+% Estimation parameters
+cont.mu = 2; 
+cont.theta_hat = [0.5;0.5;];
+cont.x_hat_k = sys.x0;
+cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
+cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
+
 
 % Define terminal constraint: z_N|k = 0; h_T*alpha_N|k <= 1;
-cont.h_T = 1;
+cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
 
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 1;
+cont.nPred_X = 7;
 %% Define simulation parameters
 
 ref = [repmat([0;0],1,10), repmat([1;1],1,15) ];
@@ -76,19 +75,14 @@ x(:,1) = sys.x0;
 true_sys = model(sys,x(:,1));
 
 tic
-presolve = 0;
-PE = 1;
-cont.rho_PE = 1.0;
+presolve = 1;
 if presolve
-    optProb1 = controller_pre(sys,cont);
+%     optProb1 = controller_pre(sys,cont);
+    optProb2 = controller_expl_pre(sys,cont);
 end
-% if presolve
-%     optProb2 = controller_expl_pre(sys,cont);
-% end
 toc
 
-rng(1,'twister');
-u_past_sim = [-1 1 -1 -0.5];
+rng(10,'twister');
 % simulate
 for k = 1:Tsim
     if any(k == [15, 30, 50])
@@ -99,17 +93,17 @@ for k = 1:Tsim
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
     theta_hats(:,k) = cont.theta_hat;
     
-    % Build past input vector  (for PE)  
-    U_past = vec([u(:,k-1:-1:max(1,k-2*sys.n-1)),u_past_sim(1:max(0,2*sys.n+1-k))]);
-    
     % calculate control input   
     tic
     if presolve
-        u(:,k) = optProb1([x(:,k);cont.h_theta_k;cont.theta_hat]);
-%         u(:,k) = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+%         [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k]);
+        [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+        if a1
+            error(a5.infostr)
+        end
     else
-        u(:,k) = controller(sys,cont,x(:,k),ref(:,k:k+cont.N-1));   
-%         u(:,k) = controller_expl(sys,cont,x(:,k));    
+        u_std(:,k) = controller(sys,cont,x(:,k));   
+        u(:,k) = controller_expl(sys,cont,x(:,k));    
     end
     toc
     
@@ -119,7 +113,7 @@ for k = 1:Tsim
     % Apply to true system
     true_sys = true_sys.simulate(u(:,k));
     x(:,k+1) = true_sys.x;
-    J = J + x(:,k+1)'*cont.Q*x(:,k+1) + u(:,k)'*cont.R*u(:,k);
+    J = J + norm(cont.Q_L*x(:,k+1),'inf') + norm(cont.R_L*u(:,k),'inf');
     
     % update regressors
         new_Dk = zeros(sys.n,sys.p);    
@@ -134,17 +128,29 @@ for k = 1:Tsim
 end
 toc
 %%
-% figure;plot(x(1,:),x(2,:))
-% figure;plotregion(-cont.H_theta,-cont.h_theta_k);
+f = 60;
+h = figure(f); f=f+1;
+subplot(411)
+hold on;
+plot(0:Tsim,x(1,:),'-*')
+ylabel('$x_1$')
 
-figure;
-subplot(311); hold on;
-plot(x(1,:))
-plot(ref(1,1:Tsim))
+subplot(412)
+hold on;
+plot(0:Tsim,x(2,:),'-*')
+ylabel('$x_2$')
 
-subplot(312); hold on;
-plot(x(2,:))
-plot(ref(2,1:Tsim))
+subplot(413)
+hold on;
+plot(0:Tsim-1,u(1,:),'-*')
+xlim([0 Tsim])
+ylabel('$u_1$')
 
-subplot(313)
-plot(u)
+subplot(414)
+hold on;
+plot(0:Tsim-1,u(2,:),'-*')
+xlim([0 Tsim])
+ylabel('$u_2$')
+% h = figure(f);f=f+1;
+% plotregion(-cont.H_theta,-cont.h_theta_k);
+% xlim([-1 1]);ylim([-1 1]);zlim([-1 1]);

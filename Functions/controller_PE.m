@@ -1,5 +1,4 @@
-function u = controller_PE(sys,cont,xk,U_past)
-% Controller with perstistently exciting input
+function u = controller_PE(sys,cont,xk,U_past,PE)
 
 %% setup optimization problem
 
@@ -140,8 +139,5 @@ catch
     end
     u = value(u_hat(:,1));
 end
-
-
-
 end
 

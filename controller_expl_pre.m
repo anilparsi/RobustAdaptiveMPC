@@ -6,8 +6,8 @@ x_pre = sdpvar(sys.n,1,'full');
 h_pre = sdpvar(sys.nHtheta,1,'full');
 theta_pre = sdpvar(sys.p,1,'full');
 
-A_pre = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
-B_pre = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
+A_pre = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
+B_pre = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
 %% Part for standard constraints
 % Declare independent variables
 % l goes from 1:N
@@ -58,7 +58,8 @@ end
 % define terminal constraints
 stdConstraints = [stdConstraints, ...
                z_lk(:,cont.N+1) == zeros(sys.n,1), ...
-                cont.h_T*alpha_lk(cont.N+1) <= 1 ];    
+                alpha_lk(cont.N+1) <= cont.alpha_bar...
+                alpha_lk(cont.N+1) >= cont.alpha_min];      
 
 %% Part for exploration
 
@@ -143,7 +144,7 @@ stage_cost_max = sdpvar(cont.N+1,1,'full');
 J = sum(stage_cost_max);
 
 % define cost constraints
-costConstraints = [norm(cont.Q_L*x_pre,'inf')+norm(cont.R_L*(cont.K*x_pre+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+costConstraints = [norm(cont.R_L*(cont.K*x_pre+v_lk(:,1)),'inf')<=stage_cost_max(1)];
 
 for l = 2:cont.N
     for j = 1:cont.nx_v                
@@ -161,7 +162,7 @@ end
 % terminal cost
 for j = 1:cont.nx_v
     costConstraints = [costConstraints, ... 
-        (cont.P)*alpha_lk(cont.N+1)*cont.x_v(:,j) <= stage_cost_max(cont.N+1)
+        norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf') <= stage_cost_max(cont.N+1)
     ];
 end
    

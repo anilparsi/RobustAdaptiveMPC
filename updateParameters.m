@@ -43,14 +43,14 @@ cont.h_theta_k = h;
 %% Estimate of theta
 theta_til = cont.theta_hat + cont.mu * Dk(end-sys.n+1:end,:)'*(xk-cont.x_hat_k); 
 
-if any(cont.H_theta*theta_til>=cont.h_theta_0)
+if any(cont.H_theta*theta_til>=cont.h_theta_k)
     % theta_til outside the initial bounds, use projection
     cvx_begin 
         variable theta_hat_p(sys.p,1)
         minimize sum((theta_hat_p-theta_til).^2)
         
         subject to
-            cont.H_theta*theta_hat_p <= cont.h_theta_0;
+            cont.H_theta*theta_hat_p <= cont.h_theta_k;
         
     cvx_end
     
@@ -67,6 +67,6 @@ else
     cont.theta_hat = theta_til;   
 end
 
-cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,3])),3);
-cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,3])),3);
+cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
+cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
 end
