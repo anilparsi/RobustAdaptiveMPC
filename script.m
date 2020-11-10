@@ -1,8 +1,8 @@
 %% Script to perform Robust Adaptive MPC
 
 clc;
-clear;
-
+clear all;
+yalmip clear;
 sys = system_desc();
 %% Define controller parameters
 
@@ -10,16 +10,16 @@ sys = system_desc();
 cont.N = 8;
 
 % cost matrices
-cont.Q = 10*eye(sys.n);
-cont.R = 0.1*eye(sys.m);
+cont.Q = eye(sys.n);
+cont.R = 1*eye(sys.m);
 cont.P = [2.8  0.56;
           0.56 2.5];
-cont.Q_L = chol(cont.Q);
-cont.R_L = chol(cont.R);
+cont.Q_L = cont.Q;
+cont.R_L = cont.R;
       
       
 % block size for updating h_theta_k
-cont.blk = 10;
+cont.blk = 5;
 
 % Define state tube shape : H_x*x <= vec_1_x, vertices: x_v(:,i)
 cont.H_x = [eye(sys.n); -eye(sys.n)];
@@ -40,41 +40,38 @@ cont.h_theta_0 = sys.h_theta;
 
 % Estimation parameters
 cont.mu = 2; 
-cont.theta_hat = [0.5;0.5;];
+cont.theta_hat = [0.5;0.5];
 cont.x_hat_k = sys.x0;
 cont.A_est = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(cont.theta_hat,[1,1,sys.p])),3);
 cont.B_est = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(cont.theta_hat,[1,1,sys.p])),3);
 
-
-% Define terminal constraint: z_N|k = 0; h_T*alpha_N|k <= 1;
-cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
-
 % Exploration: number of predictions
 cont.nPred_theta = 1;
-cont.nPred_X = 5;
+cont.nPred_X = 7;
 %% Define simulation parameters
 
 
 % reference trajectory
-x_s = [0.0 0.0
-       1.5 -1.0]';
+x_s = [0.0  2.5  
+       0.0  -2.0  ]*0.5;
 n_ref = size(x_s,2);
 
-T_ref = 10;
+T_ref = [5; 8];
 
 x_ref = [];
 for i = 1:n_ref
-    x_ref = [x_ref repmat(x_s(:,i),1,T_ref)];
+    x_ref = [x_ref repmat(x_s(:,i),1,T_ref(i))];
 end
 Tsim = size(x_ref,2);
 
 % find steady state inputs and terminal sets
 [cont.K,pwc_var] = tracking_variables(sys,cont,x_ref);
+cont.f_bar = max((sys.F+sys.G*cont.K)*cont.x_v,[],2);
 u_ref = [];
 alpha_T_ref = [];
 for i = 1:n_ref
-    u_ref = [u_ref repmat(pwc_var.u_s(:,i),1,T_ref)];
-    alpha_T_ref = [alpha_T_ref repmat(pwc_var.alpha_T(i),1,T_ref)];
+    u_ref = [u_ref repmat(pwc_var.u_s(:,i),1,T_ref(i))];
+    alpha_T_ref = [alpha_T_ref repmat(pwc_var.alpha_T(i),1,T_ref(i))];
 end
 
 % stack reference variables
@@ -117,24 +114,44 @@ if presolve
 end
 toc
 
-rng(19,'twister');
+PE = 2;
+cont.rho_PE = 0.8;
+cont.P_PE = sys.n + 1;
+u_past_sim = [0 0 0 0
+              0 0 0 0];
+
+
+x_ref = horzcat(ref(1:Tsim+1).x_s);
+
 % simulate
 for k = 1:Tsim
     % update feasible set and parameter estimate
     cont = updateParameters(sys,cont,x(:,k),Dk,dk);
-    theta_hats(:,k) = cont.theta_hat;
+%     theta_hats(:,k) = cont.theta_hat;
+
+    
+% 
+%%
+    
+    % Build past input vector  (for PE)  
+    U_past = [u(:,k-1:-1:max(1,k-sys.n-cont.P_PE)),u_past_sim(:,1:max(0,sys.n+cont.P_PE-k))];
+   
+    if k == 1
+    rng(24,'twister');
+    end
     
     % calculate control input   
     tic
     if presolve
-        [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k;vertcat(ref(k:k+cont.N).x_s);ref(k+cont.N).u_s;ref(k+cont.N).alpha_T]);
-%         [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
+%         [u(:,k),a1,~,~,~,a5] = optProb1([x(:,k);cont.h_theta_k;vertcat(ref(k:k+cont.N).x_s);ref(k+cont.N).u_s;ref(k+cont.N).alpha_T]);
+        [u(:,k),a1,~,~,~,a5] = optProb2([x(:,k);cont.h_theta_k;cont.theta_hat]);
         if a1
             error(a5.infostr)
         end
     else
-%         u(:,k) = controller(sys,cont,x(:,k),ref(k:k+cont.N));   
-        u(:,k) = controller_expl(sys,cont,x(:,k),ref(k:k+cont.N));    
+%         [u(:,k),J_OL(1,k)] = controller(sys,cont,x(:,k),ref(k:k+cont.N));  
+%         [u(:,k),J_OL(1,k),warn_flag] = controller_PE(sys,cont,x(:,k),U_past,PE,ref(k:k+cont.N));
+        [u(:,k),J_OL(1,k)] = controller_expl(sys,cont,x(:,k),ref(k:k+cont.N));    
     end
     toc
     
@@ -147,44 +164,57 @@ for k = 1:Tsim
     J = J + norm(cont.Q_L*(x(:,k+1)-ref(k+1).x_s),'inf') + norm(cont.R_L*u(:,k),'inf');
     
     % update regressors
-        new_Dk = zeros(sys.n,sys.p);    
-        for i= 1:sys.p
-            new_Dk(:,i) = sys.Ap(:,:,i)*x(:,k) + sys.Bp(:,:,i)*u(:,k);
-        end    
-        new_dk = -x(:,k+1)+sys.A0*x(:,k)+sys.B0*u(:,k);
+    new_Dk = zeros(sys.n,sys.p);    
+    for i= 1:sys.p
+        new_Dk(:,i) = sys.Ap(:,:,i)*x(:,k) + sys.Bp(:,:,i)*u(:,k);
+    end    
+    new_dk = -x(:,k+1)+sys.A0*x(:,k)+sys.B0*u(:,k);
 
-        Dk = [Dk(sys.n+1:end,:);new_Dk];
-        dk = [dk(sys.n+1:end);new_dk];
-        
+    Dk = [Dk(sys.n+1:end,:);new_Dk];
+    dk = [dk(sys.n+1:end);new_dk];
+
 end
 toc
-%%
-f = 60;
-h = figure(f); f=f+1;
-subplot(411)
+
+%% Plot 
+
+f = 70;
+h = figure(f);  f=f+1;
+%clf;
+subplot(4,2,1)
 hold on;
+plot(0:Tsim,x_ref(1,:),'k--')
 plot(0:Tsim,x(1,:),'-*')
 xlim([0 Tsim])
+ylim([-1 3])
 ylabel('$x_1$')
 
-subplot(412)
+subplot(4,2,3)
 hold on;
+plot(0:Tsim,x_ref(2,:),'k--')
 plot(0:Tsim,x(2,:),'-*')
 xlim([0 Tsim])
+ylim([-3 1])
 ylabel('$x_2$')
 
-subplot(413)
+subplot(4,2,5)
 hold on;
 plot(0:Tsim-1,u(1,:),'-*')
 xlim([0 Tsim])
+ylim([-4 4])
 ylabel('$u_1$')
 
-subplot(414)
+subplot(4,2,7)
 hold on;
 plot(0:Tsim-1,u(2,:),'-*')
 xlim([0 Tsim])
+ylim([-4 4])
 ylabel('$u_2$')
 
-h = figure(f);f=f+1;
+subplot(4,2,[2,4,6,8]); 
+hold on; 
 plotregion(-cont.H_theta,-cont.h_theta_k);
+xlabel('$\theta_1$')
+ylabel('$\theta_2$')
 xlim([-1 1]);ylim([-1 1]);zlim([-1 1]);
+

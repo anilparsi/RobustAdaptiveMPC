@@ -10,7 +10,7 @@ sys.Ap(:,:,2) = zeros(2,2);
 sys.B0 = [0.8 0.2;
           0.2 0.5];
 sys.Bp(:,:,1) = zeros(2,2);
-sys.Bp(:,:,2) = [0 0.2; 0 0.2];
+sys.Bp(:,:,2) = [0 0.2; 0 0.4];
 
 % define dimensions
 sys.n = size(sys.Bp,1);
@@ -28,17 +28,19 @@ sys = boundedComplexity(sys);
 sys.nHtheta = length(sys.h_theta);
 
 % define disturbance bounds: H_w*w <= h_w
-sys.w_bound = 0.1;
+sys.w_bound = 0.2;
 sys.H_w = [eye(sys.n);-eye(sys.n)]/sys.w_bound;
 sys.h_w = [ones(sys.n,1);ones(sys.n,1)];
 sys.nHw = length(sys.h_w);
 
 
 % define state and input constraints: F*x + G*u <= vec_1_cons
-sys.F = [-1/4 0;
-         0 -1/4; 
+x_bound = 3;
+u_bound = 4;
+sys.F = [-1/x_bound 0;
+         0 -1/x_bound; 
          zeros(4,2)];
-sys.G = [zeros(2,2); 1/2 0; -1/2 0; 0 1/2; 0 -1/2];
+sys.G = [zeros(2,2); 1/u_bound 0; -1/u_bound 0; 0 1/u_bound; 0 -1/u_bound];
 sys.nc = size(sys.F,1);
 sys.vec_1_cons = ones(sys.nc,1);
 

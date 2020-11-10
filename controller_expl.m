@@ -1,4 +1,4 @@
-function u = controller_expl(sys,cont,xk,ref)
+function [u,J_OL] = controller_expl(sys,cont,xk,ref)
 
 %% Part for standard constraints
 % Declare independent variables
@@ -161,11 +161,20 @@ end
 Constraints = [stdConstraints;exploreConstraints;costConstraints];    
 options = sdpsettings('solver','ipopt','verbose',0);
 options.ipopt.max_iter = 1500;
-diagnostics = optimize(Constraints,J,options);
-if diagnostics.problem
-   error(diagnostics.info) 
+try
+    diagnostics = optimize(Constraints,J,options);
+    if diagnostics.problem
+       error(diagnostics.info) 
+    end
+catch
+    warning('on')
+    warning('Active Exploration failed: implementing PAMPC')
+    diagnostics = optimize([stdConstraints;costConstraints],J,options);
+    if diagnostics.problem
+       error(diagnostics.info) 
+    end
 end
 u = value(cont.K*(xk-ref(1).x_s) + v_lk(:,1));
-
+J_OL = value(J);
 end
 

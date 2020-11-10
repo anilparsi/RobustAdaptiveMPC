@@ -16,14 +16,15 @@ methods
         obj.A_true = sys.A0+ sum(bsxfun(@times,sys.Ap,reshape(obj.theta_true,[1,1,sys.p])),3);
         obj.B_true = sys.B0+ sum(bsxfun(@times,sys.Bp,reshape(obj.theta_true,[1,1,sys.p])),3);
         
-        obj.w_bound = sys.w_bound;
+        obj.w_bound = sys.w_bound/2;
         obj.x = x0;
     end
     
     % simulate
     function obj = simulate(obj,u)
         % works only for uniform w bounds [not general polytope Hw*w<=1]
-        w = -obj.w_bound + 2*obj.w_bound*rand(length(obj.x),1);        
+        v = rand(length(obj.x),1);
+        w = -obj.w_bound + 2*obj.w_bound*v;        
         
         obj.x = obj.A_true*obj.x + obj.B_true*u+w;
     end

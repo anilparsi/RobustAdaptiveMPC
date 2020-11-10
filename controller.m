@@ -1,4 +1,4 @@
-function u = controller(sys,cont,xk,ref)
+function [u,J_OL] = controller(sys,cont,xk,ref)
 
 %% setup optimization problem
 
@@ -93,6 +93,6 @@ if diagnostics.problem
    error(diagnostics.info);
 end
 u = value(cont.K*(xk-ref(1).x_s) + v_lk(:,1));
-
+J_OL = value(J);
 end
 

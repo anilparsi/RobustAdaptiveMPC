@@ -45,7 +45,7 @@ theta_til = cont.theta_hat + cont.mu * Dk(end-sys.n+1:end,:)'*(xk-cont.x_hat_k);
 
 if any(cont.H_theta*theta_til>=cont.h_theta_k)
     % theta_til outside the initial bounds, use projection
-    cvx_begin 
+    cvx_begin quiet
         variable theta_hat_p(sys.p,1)
         minimize sum((theta_hat_p-theta_til).^2)
         
