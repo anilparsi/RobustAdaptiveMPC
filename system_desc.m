@@ -17,6 +17,17 @@ sys.n = size(sys.Bp,1);
 sys.m = size(sys.Bp,2);
 sys.p = size(sys.Bp,3);
 
+
+sys.Ap_mult = [];
+sys.Bp_mult = [];
+for i = 1:sys.p
+sys.Ap_mult = [sys.Ap_mult;
+                sys.Ap(:,:,i) ];
+sys.Bp_mult = [sys.Bp_mult;
+                sys.Bp(:,:,i) ];
+end
+
+
 % define bounds on theta: H_theta*theta <= h_theta
 sys.H_theta = [eye(sys.p);-eye(sys.p)];
 sys.h_theta = [ones(sys.p,1);ones(sys.p,1)];
