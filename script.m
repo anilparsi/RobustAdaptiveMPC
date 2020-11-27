@@ -10,7 +10,7 @@ sys = system_desc();
 cont.N = 8;
 
 % cost matrices
-cont.Q = eye(sys.n);
+cont.Q = 10*eye(sys.n);
 cont.R = 1*eye(sys.m);
 cont.P = [2.8  0.56;
           0.56 2.5];
@@ -52,8 +52,8 @@ cont.nPred_X = 7;
 
 
 % reference trajectory
-x_s = [0.0  2.5  
-       0.0  -2.0  ]*0.5;
+x_s = [0.0  0.5  
+       0.0  0.0  ];
 n_ref = size(x_s,2);
 
 T_ref = [5; 8];
@@ -149,9 +149,9 @@ for k = 1:Tsim
             error(a5.infostr)
         end
     else
-%         [u(:,k),J_OL(1,k)] = controller(sys,cont,x(:,k),ref(k:k+cont.N));  
+        [u(:,k),J_OL(1,k)] = controller(sys,cont,x(:,k),ref(k:k+cont.N));  
 %         [u(:,k),J_OL(1,k),warn_flag] = controller_PE(sys,cont,x(:,k),U_past,PE,ref(k:k+cont.N));
-        [u(:,k),J_OL(1,k)] = controller_expl(sys,cont,x(:,k),ref(k:k+cont.N));    
+%         [u(:,k),J_OL(1,k)] = controller_expl(sys,cont,x(:,k),ref(k:k+cont.N));    
     end
     toc
     
@@ -161,6 +161,7 @@ for k = 1:Tsim
     % Apply to true system
     true_sys = true_sys.simulate(u(:,k));
     x(:,k+1) = true_sys.x;
+%     J = J + norm(cont.Q_L*(x(:,k+1)-ref(k+1).x_s),'inf') + norm(cont.R_L*(u(:,k)-ref(l).u_s),'inf');
     J = J + norm(cont.Q_L*(x(:,k+1)-ref(k+1).x_s),'inf') + norm(cont.R_L*u(:,k),'inf');
     
     % update regressors
@@ -186,7 +187,7 @@ hold on;
 plot(0:Tsim,x_ref(1,:),'k--')
 plot(0:Tsim,x(1,:),'-*')
 xlim([0 Tsim])
-ylim([-1 3])
+ylim([-1 1])
 ylabel('$x_1$')
 
 subplot(4,2,3)
@@ -194,21 +195,21 @@ hold on;
 plot(0:Tsim,x_ref(2,:),'k--')
 plot(0:Tsim,x(2,:),'-*')
 xlim([0 Tsim])
-ylim([-3 1])
+ylim([-1 1])
 ylabel('$x_2$')
 
 subplot(4,2,5)
 hold on;
 plot(0:Tsim-1,u(1,:),'-*')
 xlim([0 Tsim])
-ylim([-4 4])
+ylim([-1 1])
 ylabel('$u_1$')
 
 subplot(4,2,7)
 hold on;
 plot(0:Tsim-1,u(2,:),'-*')
 xlim([0 Tsim])
-ylim([-4 4])
+ylim([-1 1])
 ylabel('$u_2$')
 
 subplot(4,2,[2,4,6,8]); 

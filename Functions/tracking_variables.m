@@ -16,9 +16,17 @@ end
 
 pwc_var.x_s = unique(ref','rows','stable')';
 n_ref = size(pwc_var.x_s,2);
+
+A_hat = sys.A0+sum(bsxfun(@times,sys.Ap,cont.theta_hat),3);
+B_hat = sys.B0+sum(bsxfun(@times,sys.Bp,cont.theta_hat),3);
+
 for i = 1:n_ref
     % compute input, for system corresponding to theta=0
-    pwc_var.u_s(:,i) = inv(sys.B0)*(eye(sys.n)-sys.A0)*pwc_var.x_s(:,i);
+%     pwc_var.u_s(:,i) = inv(sys.B0)*(eye(sys.n)-sys.A0)*pwc_var.x_s(:,i);
+
+    % compute input, for system corresponding to theta=theta_hat
+    pwc_var.u_s(:,i) = inv(B_hat)*(eye(sys.n)-A_hat)*pwc_var.x_s(:,i);
+    
     % check constraints for the obtained control input
     chk = sys.F*pwc_var.x_s(:,i) + sys.G*pwc_var.u_s(:,i)-sys.vec_1_cons;
     if any(chk>0)
@@ -38,7 +46,7 @@ for i = 1:n_ref
     end
 
     for j = 1:size(cont.x_v,2)
-       Cons_a = [Cons_a; (sys.F+sys.G*cont.K)*cont.x_v(:,j)<=sys.vec_1_cons*alpha_inv(i)];
+       Cons_a = [Cons_a; (sys.F+sys.G*K_var)*cont.x_v(:,j)<=sys.vec_1_cons*alpha_inv(i)];
     end
 end
 options = sdpsettings('verbose',0);

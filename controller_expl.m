@@ -135,17 +135,20 @@ stage_cost_max = sdpvar(cont.N+1,1,'full');
 J = sum(stage_cost_max);
 
 % define cost constraints
-costConstraints = [norm(cont.R_L*(cont.K*(xk-ref(1).x_s)+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+% costConstraints = [norm(cont.R_L*(cont.K*(xk-ref(1).x_s)+v_lk(:,1)),'inf')<=stage_cost_max(1)];
+costConstraints = [norm(cont.R_L*(cont.K*(xk-ref(1).x_s)+v_lk(:,1)-ref(end).u_s),'inf')<=stage_cost_max(1)];
 
 for l = 2:cont.N
     for j = 1:cont.nx_v                
         if l<=cont.nPred_X+1
             costConstraints = [costConstraints, ... 
-                norm(cont.Q_L*(x_til_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_til_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+%                 norm(cont.Q_L*(x_til_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_til_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+                norm(cont.Q_L*(x_til_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_til_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)-ref(l).u_s),'inf') <= stage_cost_max(l)
             ];
         else
             costConstraints = [costConstraints, ... 
-                norm(cont.Q_L*(x_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+%                 norm(cont.Q_L*(x_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)),'inf') <= stage_cost_max(l)
+                norm(cont.Q_L*(x_jlk(:,j,l-1)-ref(l).x_s),'inf') +  norm(cont.R_L*(cont.K*(x_jlk(:,j,l-1)-ref(l).x_s)+v_lk(:,l)-ref(l).u_s),'inf') <= stage_cost_max(l)
             ];
         end
     end
@@ -153,7 +156,8 @@ end
 % terminal cost
 for j = 1:cont.nx_v
     costConstraints = [costConstraints, ... 
-        alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*(cont.K*cont.x_v(:,j)+ref(end).u_s),'inf')) <= stage_cost_max(cont.N+1)
+%         alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*(cont.K*cont.x_v(:,j)+ref(end).u_s),'inf')) <= stage_cost_max(cont.N+1)
+        alpha_lk(cont.N+1)*(norm(cont.Q_L*cont.x_v(:,j),'inf') + norm(cont.R_L*cont.K*cont.x_v(:,j),'inf')) <= stage_cost_max(cont.N+1)
     ];
 end
 

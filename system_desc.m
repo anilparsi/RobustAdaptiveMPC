@@ -7,10 +7,10 @@ sys.Ap(:,:,1) = [0.1 0
                  0    0.1];
 sys.Ap(:,:,2) = zeros(2,2);
 
-sys.B0 = [0.8 0.2;
-          0.2 0.5];
+sys.B0 = [0.2 0.5;
+          0.1 0.5];
 sys.Bp(:,:,1) = zeros(2,2);
-sys.Bp(:,:,2) = [0 0.2; 0 0.4];
+sys.Bp(:,:,2) = [0 0.2; 0 0.2];
 
 % define dimensions
 sys.n = size(sys.Bp,1);
